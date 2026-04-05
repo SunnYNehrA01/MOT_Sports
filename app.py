@@ -2,7 +2,6 @@ import streamlit as st
 import tempfile
 import os
 import subprocess
-from core.engine import TrackingEngine
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -48,17 +47,42 @@ st.markdown("""
         width: 100%;
         border-collapse: collapse;
         margin-top: 10px;
-        font-size: 0.8rem;
+        font-size: 0.82rem;
     }
     .comparison-table th {
         text-align: left;
         color: #00ff88;
         border-bottom: 1px solid rgba(255,255,255,0.1);
-        padding-bottom: 5px;
+        padding: 8px 6px;
+        background: rgba(0, 255, 136, 0.06);
     }
     .comparison-table td {
-        padding: 8px 0;
+        padding: 8px 6px;
         border-bottom: 1px solid rgba(255,255,255,0.05);
+        vertical-align: top;
+    }
+    .comparison-table tr:hover td {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .metric-chip {
+        display: inline-block;
+        border: 1px solid rgba(0, 255, 136, 0.35);
+        border-radius: 999px;
+        padding: 2px 10px;
+        margin: 2px 6px 2px 0;
+        font-size: 0.72rem;
+        color: #9fffd2;
+        background: rgba(0, 255, 136, 0.08);
+    }
+
+    .sidebar-note {
+        border-left: 3px solid #00ff88;
+        padding: 0.65rem 0.8rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
     }
 
     [data-testid="stSidebar"] {
@@ -88,33 +112,85 @@ def main():
         with center_col:
             st.title("MOT Sports Tracker")
             st.markdown("Advanced Identity Persistence and Tactical Analysis")
+            k1, k2, k3 = st.columns(3)
+            with k1:
+                st.markdown('<span class="metric-chip">Multi-Object Tracking</span>', unsafe_allow_html=True)
+            with k2:
+                st.markdown('<span class="metric-chip">Visual Re-Identification</span>', unsafe_allow_html=True)
+            with k3:
+                st.markdown('<span class="metric-chip">Camera Motion Compensation</span>', unsafe_allow_html=True)
             st.divider()
 
             with st.sidebar:
                 st.header("Pipeline Configuration")
-                sport_type = st.selectbox("Sport Category", ["Basketball", "Football", "Cricket", "Racing", "General"])
-                
-                st.subheader("Model Selection")
-                model_size = st.select_slider(
-                    "Architecture", 
-                    options=["yolo11n.pt", "yolo11s.pt", "yolo11m.pt"], 
-                    value="yolo11s.pt"
-                )
+                config_tab, guide_tab = st.tabs(["⚙️ Config", "📊 Model Guide"])
 
-                # --- Comparison Table ---
-                st.markdown("""
-                <table class="comparison-table">
-                    <tr><th>Model</th><th>Params</th><th>Speed</th><th>Accuracy</th></tr>
-                    <tr><td>Nano (n)</td><td>2.6M</td><td>Fastest</td><td>Standard</td></tr>
-                    <tr><td>Small (s)</td><td>9.4M</td><td>Balanced</td><td>High</td></tr>
-                    <tr><td>Medium (m)</td><td>20.1M</td><td>Detailed</td><td>Maximum</td></tr>
-                </table>
-                """, unsafe_allow_html=True)
+                with config_tab:
+                    sport_type = st.selectbox(
+                        "Sport Category",
+                        ["Basketball", "Football", "Cricket", "Racing", "General"],
+                        help="Adjusts tracker assumptions and post-processing behavior for sport context.",
+                    )
 
-                with st.expander("Advanced Parameters"):
-                    use_reid = st.checkbox("Enable Visual Re-ID", value=True)
-                    use_cmc = st.checkbox("Camera Motion Compensation", value=True)
-                    conf_thresh = st.slider("Confidence Threshold", 0.1, 0.9, 0.25)
+                    st.subheader("Model Selection")
+                    model_size = st.select_slider(
+                        "Architecture",
+                        options=["yolo11n.pt", "yolo11s.pt", "yolo11m.pt"],
+                        value="yolo11s.pt",
+                        help="Choose a model based on your performance vs. precision needs.",
+                    )
+
+                    with st.expander("Advanced Parameters"):
+                        use_reid = st.checkbox("Enable Visual Re-ID", value=True)
+                        use_cmc = st.checkbox("Camera Motion Compensation", value=True)
+                        conf_thresh = st.slider("Confidence Threshold", 0.1, 0.9, 0.25)
+
+                with guide_tab:
+                    st.markdown("""
+                    <div class="sidebar-note">
+                        <strong>Quick Tip:</strong> For most laptop GPUs/CPUs, <strong>yolo11s.pt</strong> is the best default.
+                        Use <strong>yolo11m.pt</strong> when player overlap and long-range visibility are frequent.
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    st.markdown("""
+                    <table class="comparison-table">
+                        <tr>
+                            <th>Model</th>
+                            <th>Params</th>
+                            <th>Speed</th>
+                            <th>Accuracy</th>
+                            <th>Best For</th>
+                            <th>Trade-off</th>
+                        </tr>
+                        <tr>
+                            <td><strong>Nano (n)</strong><br/>yolo11n.pt</td>
+                            <td>2.6M</td>
+                            <td>Very Fast</td>
+                            <td>Standard</td>
+                            <td>Real-time inference, edge devices, quick iteration</td>
+                            <td>Lower small-object consistency in crowded frames</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Small (s)</strong><br/>yolo11s.pt</td>
+                            <td>9.4M</td>
+                            <td>Balanced</td>
+                            <td>High</td>
+                            <td>General sports analysis and stable ID persistence</td>
+                            <td>Moderate compute demand</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Medium (m)</strong><br/>yolo11m.pt</td>
+                            <td>20.1M</td>
+                            <td>Moderate</td>
+                            <td>Maximum</td>
+                            <td>Dense scenes, tactical review, highest detection fidelity</td>
+                            <td>Higher latency and larger memory footprint</td>
+                        </tr>
+                    </table>
+                    """, unsafe_allow_html=True)
+
+                    st.caption("Model parameter values are approximate and intended for quick planning.")
 
             st.markdown('<div class="bento-card">', unsafe_allow_html=True)
             uploaded_file = st.file_uploader("Upload video file (MP4, MOV, AVI)", type=["mp4", "mov", "avi"])
@@ -126,6 +202,16 @@ def main():
                 st.caption(f"File: {uploaded_file.name} | Model: {model_size}")
                 
                 if st.button("Run Tracking Engine"):
+                    try:
+                        from core.engine import TrackingEngine
+                    except ImportError as e:
+                        st.error(
+                            "Tracking dependencies are unavailable in this environment. "
+                            "Please install system OpenCV requirements or use the headless OpenCV package."
+                        )
+                        st.exception(e)
+                        st.stop()
+
                     tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
                     tfile.write(uploaded_file.read())
                     input_path = tfile.name
