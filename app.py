@@ -2,7 +2,6 @@ import streamlit as st
 import tempfile
 import os
 import subprocess
-from core.engine import TrackingEngine
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -203,6 +202,16 @@ def main():
                 st.caption(f"File: {uploaded_file.name} | Model: {model_size}")
                 
                 if st.button("Run Tracking Engine"):
+                    try:
+                        from core.engine import TrackingEngine
+                    except ImportError as e:
+                        st.error(
+                            "Tracking dependencies are unavailable in this environment. "
+                            "Please install system OpenCV requirements or use the headless OpenCV package."
+                        )
+                        st.exception(e)
+                        st.stop()
+
                     tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
                     tfile.write(uploaded_file.read())
                     input_path = tfile.name
