@@ -95,9 +95,26 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 def convert_to_h264(input_path, output_path):
-    """Converts OpenCV output to browser-compatible H.264."""
-    command = f'ffmpeg -y -i "{input_path}" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p "{output_path}"'
-    subprocess.call(command, shell=True)
+    """Converts OpenCV output to browser-compatible H.264.
+    Returns True when conversion succeeds, False otherwise.
+    """
+    command = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_path,
+        "-c:v",
+        "libx264",
+        "-crf",
+        "23",
+        "-preset",
+        "fast",
+        "-pix_fmt",
+        "yuv420p",
+        output_path,
+    ]
+    result = subprocess.run(command, capture_output=True, text=True)
+    return result.returncode == 0 and os.path.exists(output_path) and os.path.getsize(output_path) > 0
 
 def main():
     if 'processed' not in st.session_state:
