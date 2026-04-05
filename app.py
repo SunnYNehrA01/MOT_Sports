@@ -102,8 +102,10 @@ def convert_to_h264(input_path, output_path):
 def main():
     if 'processed' not in st.session_state:
         st.session_state.processed = False
-    if 'output_file' not in st.session_state:
-        st.session_state.output_file = None
+    if 'output_bytes' not in st.session_state:
+        st.session_state.output_bytes = None
+    if 'output_filename' not in st.session_state:
+        st.session_state.output_filename = None
 
     # --- VIEW 1: Upload and Configuration ---
     if not st.session_state.processed:
@@ -223,8 +225,10 @@ def main():
                     }
                     
                     engine = TrackingEngine(args)
-                    raw_out = f"raw_{uploaded_file.name}"
-                    web_out = f"web_{uploaded_file.name}"
+                    raw_fd, raw_out = tempfile.mkstemp(suffix=".mp4")
+                    web_fd, web_out = tempfile.mkstemp(suffix=".mp4")
+                    os.close(raw_fd)
+                    os.close(web_fd)
 
                     p_bar = st.progress(0)
                     try:
@@ -232,16 +236,22 @@ def main():
                             engine.process_video(input_path, raw_out, sport_type, lambda p: p_bar.progress(p))
                         
                         convert_to_h264(raw_out, web_out)
-                        
-                        if os.path.exists(raw_out): os.remove(raw_out)
-                        if os.path.exists(input_path): os.remove(input_path)
-                        
-                        st.session_state.output_file = web_out
+
+                        with open(web_out, "rb") as video_file:
+                            st.session_state.output_bytes = video_file.read()
+                        st.session_state.output_filename = f"analysis_{os.path.splitext(uploaded_file.name)[0]}.mp4"
                         st.session_state.processed = True
                         st.rerun()
 
                     except Exception as e:
                         st.error(f"Processing Error: {e}")
+                    finally:
+                        if os.path.exists(raw_out):
+                            os.remove(raw_out)
+                        if os.path.exists(web_out):
+                            os.remove(web_out)
+                        if os.path.exists(input_path):
+                            os.remove(input_path)
                 st.markdown('</div>', unsafe_allow_html=True)
 
     # --- VIEW 2: Results View ---
@@ -257,7 +267,7 @@ def main():
 
             with col_vid:
                 st.markdown('<div class="bento-card">', unsafe_allow_html=True)
-                st.video(st.session_state.output_file)
+                st.video(st.session_state.output_bytes)
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with col_meta:
@@ -265,20 +275,18 @@ def main():
                 st.write("Export Metadata")
                 st.info("The output video is encoded in H.264 for full browser and player support.")
                 
-                with open(st.session_state.output_file, "rb") as f:
-                    st.download_button(
-                        label="Download Analysis Video",
-                        data=f,
-                        file_name=st.session_state.output_file,
-                        mime="video/mp4"
-                    )
+                st.download_button(
+                    label="Download Analysis Video",
+                    data=st.session_state.output_bytes,
+                    file_name=st.session_state.output_filename or "analysis.mp4",
+                    mime="video/mp4"
+                )
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 if st.button("New Project"):
-                    if os.path.exists(st.session_state.output_file):
-                        os.remove(st.session_state.output_file)
                     st.session_state.processed = False
-                    st.session_state.output_file = None
+                    st.session_state.output_bytes = None
+                    st.session_state.output_filename = None
                     st.rerun()
 
 if __name__ == "__main__":
