@@ -1,0 +1,16 @@
+# --- Core AI & Computer Vision ---
+ultralytics>=8.3.0      # Provides 'from ultralytics import YOLO'
+torch                   # Provides 'import torch'
+torchvision             # Provides 'import torchvision'
+opencv-python           # Provides 'import cv2'
+Pillow                  # Provides 'from PIL import Image'
+
+# --- Tracking & Math ---
+filterpy                # Provides 'from filterpy.kalman import KalmanFilter'
+scipy                   # Provides 'from scipy.optimize import linear_sum_assignment'
+numpy                   # Provides 'import numpy as np'
+
+# --- UI & Utilities ---
+streamlit               # Provides 'import streamlit as st'
+PyYAML                  # Provides 'import yaml'
+tqdm                    # Provides 'from tqdm import tqdm'

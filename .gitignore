@@ -1,0 +1,38 @@
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Model Weights
+*.pt
+*.pth
+*.weights
+*.onnx
+yolo11s.pt
+
+# Video Outputs (Processed and Temporary)
+*.mp4
+*.avi
+*.mov
+tracked_*.mp4
+raw_*.mp4
+web_*.mp4
+temp_*.mp4
+
+# IDE and OS Specific
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Environment and Logs
+.env
+*.log
