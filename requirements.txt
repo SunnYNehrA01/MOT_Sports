@@ -2,7 +2,7 @@
 ultralytics>=8.3.0      # Provides 'from ultralytics import YOLO'
 torch                   # Provides 'import torch'
 torchvision             # Provides 'import torchvision'
-opencv-python           # Provides 'import cv2'
+opencv-python-headless  # Provides 'import cv2' (no libGL dependency, cloud-friendly)
 Pillow                  # Provides 'from PIL import Image'
 
 # --- Tracking & Math ---
