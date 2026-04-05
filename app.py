@@ -252,16 +252,10 @@ def main():
                         with st.spinner("Analyzing frames and resolving identities..."):
                             engine.process_video(input_path, raw_out, sport_type, lambda p: p_bar.progress(p))
                         
-                        conversion_ok = convert_to_h264(raw_out, web_out)
-                        output_source = web_out if conversion_ok else raw_out
+                        convert_to_h264(raw_out, web_out)
 
-                        with open(output_source, "rb") as video_file:
-                            video_bytes = video_file.read()
-
-                        if not video_bytes:
-                            raise RuntimeError("Processed video is empty. Please retry with a different input video.")
-
-                        st.session_state.output_bytes = video_bytes
+                        with open(web_out, "rb") as video_file:
+                            st.session_state.output_bytes = video_file.read()
                         st.session_state.output_filename = f"analysis_{os.path.splitext(uploaded_file.name)[0]}.mp4"
                         st.session_state.processed = True
                         st.rerun()
