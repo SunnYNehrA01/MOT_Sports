@@ -2,6 +2,7 @@ import streamlit as st
 import tempfile
 import os
 import subprocess
+import shutil
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -96,8 +97,11 @@ st.markdown("""
 
 def convert_to_h264(input_path, output_path):
     """Converts OpenCV output to browser-compatible H.264.
-    Returns True when conversion succeeds, False otherwise.
+    Returns (success, message).
     """
+    if shutil.which("ffmpeg") is None:
+        return False, "FFmpeg is not installed in this environment."
+
     command = [
         "ffmpeg",
         "-y",
@@ -113,8 +117,18 @@ def convert_to_h264(input_path, output_path):
         "yuv420p",
         output_path,
     ]
-    result = subprocess.run(command, capture_output=True, text=True)
-    return result.returncode == 0 and os.path.exists(output_path) and os.path.getsize(output_path) > 0
+    try:
+        result = subprocess.run(command, capture_output=True, text=True)
+    except FileNotFoundError:
+        return False, "FFmpeg executable is unavailable."
+
+    success = result.returncode == 0 and os.path.exists(output_path) and os.path.getsize(output_path) > 0
+    if success:
+        return True, "Converted to H.264."
+
+    details = (result.stderr or result.stdout or "Unknown FFmpeg error").strip().splitlines()
+    tail = details[-1] if details else "Unknown FFmpeg error"
+    return False, f"FFmpeg conversion failed: {tail}"
 
 def main():
     if 'processed' not in st.session_state:
@@ -123,6 +137,8 @@ def main():
         st.session_state.output_bytes = None
     if 'output_filename' not in st.session_state:
         st.session_state.output_filename = None
+    if 'encoding_note' not in st.session_state:
+        st.session_state.encoding_note = None
 
     # --- VIEW 1: Upload and Configuration ---
     if not st.session_state.processed:
@@ -252,11 +268,17 @@ def main():
                         with st.spinner("Analyzing frames and resolving identities..."):
                             engine.process_video(input_path, raw_out, sport_type, lambda p: p_bar.progress(p))
                         
-                        convert_to_h264(raw_out, web_out)
+                        converted, conversion_msg = convert_to_h264(raw_out, web_out)
+                        selected_output = web_out if converted else raw_out
 
-                        with open(web_out, "rb") as video_file:
+                        with open(selected_output, "rb") as video_file:
                             st.session_state.output_bytes = video_file.read()
                         st.session_state.output_filename = f"analysis_{os.path.splitext(uploaded_file.name)[0]}.mp4"
+                        st.session_state.encoding_note = (
+                            "Output encoded to H.264 for maximum browser compatibility."
+                            if converted
+                            else f"Using original tracker output because conversion was skipped. {conversion_msg}"
+                        )
                         st.session_state.processed = True
                         st.rerun()
 
@@ -290,7 +312,7 @@ def main():
             with col_meta:
                 st.markdown('<div class="bento-card">', unsafe_allow_html=True)
                 st.write("Export Metadata")
-                st.info("The output video is encoded in H.264 for full browser and player support.")
+                st.info(st.session_state.encoding_note or "Output video is ready for download.")
                 
                 st.download_button(
                     label="Download Analysis Video",
@@ -304,6 +326,7 @@ def main():
                     st.session_state.processed = False
                     st.session_state.output_bytes = None
                     st.session_state.output_filename = None
+                    st.session_state.encoding_note = None
                     st.rerun()
 
 if __name__ == "__main__":
